@@ -1,7 +1,10 @@
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
+// MODELS
 const User = require("./models/User");
+const PostModel = require("./models/Post")
+
 const bcrypt = require("bcryptjs");
 const app = express();
 const jwt = require("jsonwebtoken");
@@ -10,14 +13,18 @@ const cookieParser = require("cookie-parser");
 const salt = bcrypt.genSaltSync(10);
 const secret = "jh761289e0w8uiygflkjhgtfre4567898iuhygfre45678ve";
 
-// Middleware 
+const multer = require("multer");
+const uploadMiddleware = multer({ dest: "uploads/" });
+const fs = require("fs");
+
+// Middleware
 app.use(cors({ credentials: true, origin: "http://localhost:5173" }));
 app.use(express.json());
 app.use(cookieParser());
 
 mongoose.connect(
-  "mongodb+srv://myMernBlog:MernBlogAPIMongoDB@cluster0.hyodqky.mongodb.net/?retryWrites=true&w=majority" 
-); 
+  "mongodb+srv://myMernBlog:MernBlogAPIMongoDB@cluster0.hyodqky.mongodb.net/?retryWrites=true&w=majority"
+);
 
 // For Registration!!!
 app.post("/register", async (req, res) => {
@@ -65,6 +72,27 @@ app.get("/profile", (req, res) => {
 
 app.post("/logout", (req, res) => {
   res.cookie("token", "").json("ok");
+});
+
+// FOR CREATE POST
+app.post("/post", uploadMiddleware.single("file"), async (req, res) => {
+  const { originalname, path } = req.file;
+  const parts = originalname.split(".");
+  const ext = parts[parts.length - 1];
+  // To rename the file with its extention
+  const newPath = path + "." + ext;
+  fs.renameSync(path, newPath);
+
+  // TO USE THE POST MODEL
+  const {title, summary, content} = req.body;
+  const postDoc = await PostModel.create({
+    title, summary, content, fileCover: newPath,
+  });
+
+  res.json(postDoc);
+  res.json({ ext });
+  // res.json({ files: req.file });
+  // res.json("ok");
 });
 
 app.listen(4000, () => {
