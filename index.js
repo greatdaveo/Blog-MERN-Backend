@@ -79,6 +79,7 @@ app.post("/logout", (req, res) => {
 
 // FOR CREATE POST
 app.post("/post", uploadMiddleware.single("file"), async (req, res) => {
+  // These are basically for the file field (e.g image)
   const { originalname, path } = req.file;
   const parts = originalname.split(".");
   const ext = parts[parts.length - 1];
@@ -99,6 +100,44 @@ app.post("/post", uploadMiddleware.single("file"), async (req, res) => {
       fileCover: newPath,
       author: info.id,
     });
+    res.json(postDoc);
+  });
+});
+
+// TO EDIT THE CREATED POST
+app.put("/post", uploadMiddleware.single("single"), async (req, res) => {
+  // These are basically for the file field (e.g image)
+  let newPath = null;
+
+  if (req.file) {
+    const { originalname, path } = req.file;
+    const parts = originalname.split(".");
+    const ext = parts[parts.length - 1];
+    // To rename the file name extension
+    newPath = path + "." + ext;
+    fs.renameSync(path, newPath);
+  }
+
+  const { token } = req.cookies;
+  jwt.verify(token, secret, {}, async (err, info) => {
+    if (err) throw err;
+
+    const { id, title, summary, content } = req.body;
+    const postDoc = await PostModel.findById(id);
+    // To compare user ID before editing
+    const isAuthor = JSON.stringify(postDoc.author) === JSON.stringify(info.id);
+    // res.json(isAuthor, postDoc, info);
+    if (!isAuthor) {
+      return res.status(400).json("You are not the author!!!");
+    }
+    // If the the author is true, it will update the post by running this
+    await postDoc.updateOne({
+      title,
+      summary,
+      content,
+      fileCover: newPath ? newPath : postDoc.fileCover,
+    });
+
     res.json(postDoc);
   });
 });
