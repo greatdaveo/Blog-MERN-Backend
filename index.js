@@ -112,6 +112,15 @@ app.get("/post", async (req, res) => {
   res.json(eachPost);
 });
 
+// THE API END POINT FOR EACH SINGLE POST
+app.get("/post/:id", async (req, res) => {
+  const {id} = req.params;
+  const postDoc = await PostModel.findById(id).populate("author", ["username"]);
+  res.json(postDoc)
+})
+
+
+
 app.listen(4000, () => {
   console.log("Server is running!");
 });  
