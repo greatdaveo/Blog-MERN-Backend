@@ -7,9 +7,10 @@ const PostSchema = new Schema(
     summary: String,
     content: String,
     fileCover: String,
+    author: { type: Schema.Types.ObjectId, ref: "User" },
   },
   {
-    timeStamps: true,
+    timestamps: true,
   }
 );
 

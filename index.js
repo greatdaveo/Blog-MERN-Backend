@@ -21,6 +21,8 @@ const fs = require("fs");
 app.use(cors({ credentials: true, origin: "http://localhost:5173" }));
 app.use(express.json());
 app.use(cookieParser());
+// To save all the static files from the upload folder
+app.use("/uploads", express.static(__dirname + "/uploads"))
 
 mongoose.connect(
   "mongodb+srv://myMernBlog:MernBlogAPIMongoDB@cluster0.hyodqky.mongodb.net/?retryWrites=true&w=majority"
@@ -70,6 +72,7 @@ app.get("/profile", (req, res) => {
   });
 });
 
+// FOR LOGOUT
 app.post("/logout", (req, res) => {
   res.cookie("token", "").json("ok");
 });
@@ -84,17 +87,31 @@ app.post("/post", uploadMiddleware.single("file"), async (req, res) => {
   fs.renameSync(path, newPath);
 
   // TO USE THE POST MODEL
-  const {title, summary, content} = req.body;
-  const postDoc = await PostModel.create({
-    title, summary, content, fileCover: newPath,
-  });
+  const { token } = req.cookies;
+  jwt.verify(token, secret, async (err, info) => {
+    if (err) throw err;
 
-  res.json(postDoc);
-  res.json({ ext });
-  // res.json({ files: req.file });
-  // res.json("ok");
+    const { title, summary, content } = req.body;
+    const postDoc = await PostModel.create({
+      title,
+      summary,
+      content,
+      fileCover: newPath,
+      author: info.id,
+    });
+    res.json(postDoc);
+  });
+});
+
+// TO GET THE CREATED POST TO ANY PART OF THE SCREEN e.g Home Page
+app.get("/post", async (req, res) => {
+  const eachPost = await PostModel.find()
+    .populate("author", ["username"])
+    .sort({createdAt: -1})
+    .limit(20)
+  res.json(eachPost);
 });
 
 app.listen(4000, () => {
   console.log("Server is running!");
-}); 
+});  
